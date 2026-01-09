@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+/* HUD */
+#radioHUD {
+    position: absolute;
+    bottom: 0%;
+    right: 0%;
+    width: 285px;
+    height: 213px;
+    display: none;
+    background-image: url('image/radio.png');
+    background-size: cover;
+    text-align: center;
+}
+
+/* Display-Fenster */
+#radioHUD .station {
+    position: absolute;
+    left: 23%;
+    bottom: 24%;
+    transform: translate(-50%, -50%);
+    width: 29%;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* Beweglicher Text */
+#radioHUD .station span {
+    display: inline-block;
+    font-size: 12px;
+    color: rgb(255, 153, 0);
+    font-family: 'Digital-7', monospace;
+    will-change: transform;
+}
+</style>
+</head>
+
+<body>
+<div id="radioHUD">
+    <div class="station">
+        <span id="station">-</span>
+    </div>
+</div>
+
+<script>
+let scrollTimer = null;
+
+function stopStationScroll() {
+    if (scrollTimer) {
+        clearTimeout(scrollTimer);
+        scrollTimer = null;
+    }
+
+    const text = document.getElementById('station');
+    text.style.transition = 'none';
+    text.style.transform = 'translateX(0)';
+}
+
+function startStationScroll() {
+    const container = document.querySelector('.station');
+    const text = document.getElementById('station');
+
+    stopStationScroll();
+
+    const containerWidth = container.offsetWidth;
+    const textWidth = text.scrollWidth;
+
+    if (textWidth <= containerWidth) return;
+
+    const distance = textWidth - containerWidth + 6;
+    const speed = 40; // ms pro Pixel
+    const duration = distance * speed;
+
+    function loop() {
+        // Startposition
+        text.style.transition = 'none';
+        text.style.transform = 'translateX(0)';
+
+        scrollTimer = setTimeout(() => {
+            // Scroll nach links
+            text.style.transition = `transform ${duration}ms linear`;
+            text.style.transform = `translateX(-${distance}px)`;
+
+            // Nach Ende → Pause → neu starten
+            scrollTimer = setTimeout(loop, duration + 5000);
+        }, 800); // Start-Pause
+    }
+
+    loop();
+}
+
+window.addEventListener('message', (event) => {
+    const data = event.data;
+    const hud = document.getElementById("radioHUD");
+    const stationEl = document.getElementById("station");
+
+
+    if (data.action !== "updateRadio") return;
+
+    // HUD an/aus
+    hud.style.display = data.radioOn ? "block" : "none";
+
+    // Radio oder Motor aus → Reset
+    if (!data.radioOn || data.engineOff) {
+        stopStationScroll();
+        return;
+    }
+
+    if (data.station) {
+        stationEl.textContent = data.station;
+        requestAnimationFrame(startStationScroll);
+    }
+});
+</script>
+</body>
+</html>
